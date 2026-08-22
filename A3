@@ -1,1 +1,12 @@
-
+object UppercaseCount {
+  def main(args: Array[String]): Unit = {
+    val input = "Hello World! Scala is AWESOME."
+    
+    val uppercaseCount = input.count(_.isUpper)
+    val lowerString = input.toLowerCase
+    
+    println(s"Original string: $input")
+    println(s"Number of uppercase letters: $uppercaseCount")
+    println(s"String in lowercase: $lowerString")
+  }
+}
