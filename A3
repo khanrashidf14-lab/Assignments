@@ -1,3 +1,4 @@
+1.
 object UppercaseCount {
   def main(args: Array[String]): Unit = {
     val input = "Hello World! Scala is AWESOME."
@@ -8,5 +9,81 @@ object UppercaseCount {
     println(s"Original string: $input")
     println(s"Number of uppercase letters: $uppercaseCount")
     println(s"String in lowercase: $lowerString")
+  }
+}
+
+
+
+
+
+2.
+object CharCount {
+  def main(args: Array[String]): Unit = {
+    val str = "Hello World! Welcome to Scala programming."
+    print("Enter a character to count: ")
+    val ch = scala.io.StdIn.readChar()
+    
+    val count = str.count(_ == ch)
+    
+    println(s"The character '$ch' appears $count time(s) in the string.")
+  }
+}
+
+
+
+
+
+
+
+3.
+object RemoveChar {
+  def removeCharAt(str: String, pos: Int): String = {
+    if (pos < 0 || pos >= str.length) {
+      println(s"Invalid position! Position must be between 0 and ${str.length - 1}")
+      str   // return original string if invalid
+    } else {
+      str.take(pos) + str.drop(pos + 1)
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val original = "ScalaProgramming"
+    println(s"Original string: $original")
+    
+    // Valid position
+    val result1 = removeCharAt(original, 5)
+    println(s"After removing char at position 5: $result1")
+    
+    // Invalid position
+    val result2 = removeCharAt(original, 20)
+    println(s"After invalid position: $result2")
+  }
+}
+
+
+
+
+
+
+
+
+4.
+object PalindromeCheck {
+  def isPalindrome(str: String): Boolean = {
+    val cleaned = str.toLowerCase.filter(_.isLetterOrDigit)  // optional cleaning
+    cleaned match {
+      case s if s.length <= 1 => true
+      case s if s.head != s.last => false
+      case s => isPalindrome(s.substring(1, s.length - 1))
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val testStrings = List("Madam", "Hello", "A man a plan a canal Panama", "12321", "Scala")
+
+    testStrings.foreach { s =>
+      val result = if (isPalindrome(s)) "is a palindrome" else "is NOT a palindrome"
+      println(s"\"$s\" $result")
+    }
   }
 }
