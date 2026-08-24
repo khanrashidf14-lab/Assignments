@@ -75,7 +75,7 @@ void dep() {
     if(!bp)exit(1);
     sprintf(bp->data,"DEP %d",s->dep);
     s->bal+=s->dep;
-    printf("[%d] deposit %d bal=%d\n",getpid(),s->dep,s->bal);
+    printf("[Deposit] deposit %d bal=%d\n",getpid(),s->dep,s->bal);
     brelse(bp); s->rdy=1; exit(0);
 }
 
@@ -85,8 +85,8 @@ void wdr() {
     B *bp=getblk(getpid(),2);
     if(!bp)exit(1);
     if(s->bal>=s->wdr){s->bal-=s->wdr;sprintf(bp->data,"WDR %d",s->wdr);
-        printf("[%d] wdr ok bal=%d\n",getpid(),s->bal);}
-    else printf("[%d] wdr fail\n",getpid());
+        printf("[Withdrawl] wdr ok bal=%d\n",getpid(),s->bal);}
+    else printf("[Withdrawl] wdr fail\n",getpid());
     brelse(bp); exit(0);
 }
 
@@ -96,8 +96,8 @@ void emi() {
     B *bp=getblk(getpid(),3);
     if(!bp)exit(1);
     if(s->bal>=s->emi){s->bal-=s->emi;sprintf(bp->data,"EMI %d",s->emi);
-        printf("[%d] emi ok bal=%d\n",getpid(),s->bal);}
-    else printf("[%d] emi fail\n",getpid());
+        printf("[EMI] emi ok bal=%d\n",getpid(),s->bal);}
+    else printf("[EMI] emi fail\n",getpid());
     brelse(bp); exit(0);
 }
 
