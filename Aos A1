@@ -1,3 +1,127 @@
+//updated one
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/wait.h>
+#include <string.h>
+
+#define N 4
+#define BS 32
+#define K 0xBEEF
+
+typedef struct b {
+    int f,d,n;
+    struct b *fw,*bw;
+    char data[BS];
+} B;
+
+typedef struct {
+    B buf[N];
+    B *fl;
+    int bal,dep,wdr,emi,rdy;
+} S;
+
+S *s;
+int mid;
+
+void init() {
+    int i;
+    for(i=0;i<N;i++){
+        s->buf[i].f=s->buf[i].d=s->buf[i].n=-1;
+        s->buf[i].fw=&s->buf[(i+1)%N];
+        s->buf[i].bw=&s->buf[(i-1+N)%N];
+        memset(s->buf[i].data,0,BS);
+    }
+    s->fl=&s->buf[0];
+}
+
+B *getblk(int d,int n) {
+    B *bp; int t=0;
+    while(1){
+        for(bp=s->buf;bp<&s->buf[N];bp++)
+            if(bp->d==d&&bp->n==n){
+                if(bp->f&1){bp->f|=2;sleep(1);continue;}
+                bp->f|=1;
+                bp->bw->fw=bp->fw;bp->fw->bw=bp->bw;
+                if(s->fl==bp)s->fl=(bp->fw==bp)?NULL:bp->fw;
+                printf("[%d] cache hit\n",getpid());
+                return bp;
+            }
+        if(!s->fl){
+            printf("[%d] 4th: freelist empty -> sleep\n",getpid());
+            sleep(2); if(++t>5)return NULL; continue;
+        }
+        bp=s->fl;
+        s->fl=(bp->fw==bp)?NULL:bp->fw;
+        if(s->fl){bp->bw->fw=bp->fw;bp->fw->bw=bp->bw;}
+        bp->f=1;bp->d=d;bp->n=n;
+        printf("[%d] 5th: took free buf\n",getpid());
+        return bp;
+    }
+}
+
+void brelse(B *bp) {
+    bp->f&=~3;
+    if(!s->fl){s->fl=bp;bp->fw=bp->bw=bp;}
+    else{bp->fw=s->fl;bp->bw=s->fl->bw;s->fl->bw->fw=bp;s->fl->bw=bp;s->fl=bp;}
+    printf("[%d] released\n",getpid());
+}
+
+void dep() {
+    B *bp=getblk(getpid(),1);
+    if(!bp)exit(1);
+    sprintf(bp->data,"DEP %d",s->dep);
+    s->bal+=s->dep;
+    printf("[%d] deposit %d bal=%d\n",getpid(),s->dep,s->bal);
+    brelse(bp); s->rdy=1; exit(0);
+}
+
+void wdr() {
+    while(!s->rdy)sleep(1);
+    if(s->bal<s->wdr){printf("[%d] wdr sleep (low bal)\n",getpid());sleep(3);}
+    B *bp=getblk(getpid(),2);
+    if(!bp)exit(1);
+    if(s->bal>=s->wdr){s->bal-=s->wdr;sprintf(bp->data,"WDR %d",s->wdr);
+        printf("[%d] wdr ok bal=%d\n",getpid(),s->bal);}
+    else printf("[%d] wdr fail\n",getpid());
+    brelse(bp); exit(0);
+}
+
+void emi() {
+    while(!s->rdy)sleep(1);
+    if(s->bal<s->emi){printf("[%d] emi sleep (low bal)\n",getpid());sleep(3);}
+    B *bp=getblk(getpid(),3);
+    if(!bp)exit(1);
+    if(s->bal>=s->emi){s->bal-=s->emi;sprintf(bp->data,"EMI %d",s->emi);
+        printf("[%d] emi ok bal=%d\n",getpid(),s->bal);}
+    else printf("[%d] emi fail\n",getpid());
+    brelse(bp); exit(0);
+}
+
+int main() {
+    mid=shmget(K,sizeof(S),IPC_CREAT|0666);
+    s=shmat(mid,0,0);
+    memset(s,0,sizeof(S));
+    s->bal=500;s->dep=2000;s->wdr=1200;s->emi=800;
+    init();
+    printf("init bal=%d\n",s->bal);
+    if(!fork())dep();
+    if(!fork())wdr();
+    if(!fork())emi();
+    wait(0);wait(0);wait(0);
+    printf("final bal=%d\n",s->bal);
+    shmdt(s);shmctl(mid,IPC_RMID,0);
+    return 0;
+}
+
+
+
+
+
+//Best approach
 /*
  * Banking Transactions illustrating 4th & 5th Buffer Allocation Scenarios
  * Processes : Deposit, Withdraw, EMI
