@@ -1,7 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>//exit()
-#include <unistd.h>//fork(),write(),read(),pipe(),close()
-#include <sys/wait.h>//waitpid()
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>   // F_GETPIPE_SZ
 
 typedef struct {
     int type;   // 1 = deposit, 2 = withdrawal, 3 = EMI
@@ -11,13 +12,14 @@ typedef struct {
 void deposit(int fd)
 {
     Request r;
-
     r.type = 1;
     r.amount = 2000;
+    
+    // Display Child Buffer Info
+    printf("[Child 1 - Deposit] Stack Buffer Address: %p | Size: %lu bytes\n", (void*)&r, sizeof(r));
 
-    write(fd, &r, sizeof(r));//fd = where to write  //&r=what to write ,sizeof(r)=how many bytes
+    write(fd, &r, sizeof(r));
     printf("[Deposit] Sent deposit request: %d\n", r.amount);
-
     close(fd);
     exit(0);
 }
@@ -25,13 +27,14 @@ void deposit(int fd)
 void withdrawal(int fd)
 {
     Request r;
-
     r.type = 2;
     r.amount = 1200;
 
+    // Display Child Buffer Info
+    printf("[Child 2 - Withdrawal] Stack Buffer Address: %p | Size: %lu bytes\n", (void*)&r, sizeof(r));
+
     write(fd, &r, sizeof(r));
     printf("[Withdrawal] Sent withdrawal request: %d\n", r.amount);
-
     close(fd);
     exit(0);
 }
@@ -39,13 +42,14 @@ void withdrawal(int fd)
 void emi(int fd)
 {
     Request r;
-
     r.type = 3;
     r.amount = 800;
 
+    // Display Child Buffer Info
+    printf("[Child 3 - EMI] Stack Buffer Address: %p | Size: %lu bytes\n", (void*)&r, sizeof(r));
+
     write(fd, &r, sizeof(r));
     printf("[EMI] Sent EMI request: %d\n", r.amount);
-
     close(fd);
     exit(0);
 }
@@ -53,101 +57,76 @@ void emi(int fd)
 int main()
 {
     int pipefd[2];
-    pid_t p1, p2, p3;  //p1 → process ID of deposit child,p2 → process ID of withdrawal child,p3 → process ID of EMI child
-
+    pid_t p1, p2, p3;
     int balance = 0;
     Request r;
 
-    if (pipe(pipefd) == -1) {  //This creates the communication channel.
-        perror("pipe");  //perror() =print an error message explaining why a system/library function failed.
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
         exit(1);
     }
 
+    // Display Kernel Pipe Buffer Capacity (Linux specific: F_GETPIPE_SZ)
+    #ifdef F_GETPIPE_SZ
+    int pipe_capacity = fcntl(pipefd[0], F_GETPIPE_SZ);
+    printf("=== BUFFER ALLOCATION SUMMARY ===\n");
+    printf("[Kernel Space] Pipe Buffer Size: %d bytes (%d KB)\n", pipe_capacity, pipe_capacity / 1024);
+    #endif
+
+    // Display Parent Buffer Info
+    printf("[Parent Space] Stack Buffer Address (&r): %p | Size: %lu bytes\n", (void*)&r, sizeof(r));
+    printf("=================================\n\n");
+
     printf("Initial balance = %d\n", balance);
 
-    /* Deposit child */
-    p1 = fork();  //creates a new process.
-
+    p1 = fork();
     if (p1 == 0) {
-        close(pipefd[0]);   // child doesn't read
+        close(pipefd[0]);
         deposit(pipefd[1]);
     }
 
-    /* Withdrawal child */
     p2 = fork();
-
     if (p2 == 0) {
         close(pipefd[0]);
         withdrawal(pipefd[1]);
     }
 
-    /* EMI child */
     p3 = fork();
-
     if (p3 == 0) {
         close(pipefd[0]);
         emi(pipefd[1]);
     }
 
-    /* Parent doesn't write */
     close(pipefd[1]);
 
-    /*
-     * Parent receives requests from children
-     */
-    while (read(pipefd[0], &r, sizeof(r)) > 0) {  //"Keep reading requests from the pipe as long as there is data."
-
+    while (read(pipefd[0], &r, sizeof(r)) > 0) {
         if (r.type == 1) {
             balance += r.amount;
-
-            printf("[Parent] Deposit %d -> balance = %d\n",
-                   r.amount, balance);
+            printf("[Parent] Deposit %d -> balance = %d\n", r.amount, balance);
         }
-
         else if (r.type == 2) {
             if (balance >= r.amount) {
                 balance -= r.amount;
-
-                printf("[Parent] Withdrawal %d successful -> balance = %d\n",
-                       r.amount, balance);
-            }
-            else {
-                printf("[Parent] Withdrawal %d failed -> balance = %d\n",
-                       r.amount, balance);
+                printf("[Parent] Withdrawal %d successful -> balance = %d\n", r.amount, balance);
+            } else {
+                printf("[Parent] Withdrawal %d failed -> balance = %d\n", r.amount, balance);
             }
         }
-
         else if (r.type == 3) {
             if (balance >= r.amount) {
                 balance -= r.amount;
-
-                printf("[Parent] EMI %d successful -> balance = %d\n",
-                       r.amount, balance);
-            }
-            else {
-                printf("[Parent] EMI %d failed -> balance = %d\n",
-                       r.amount, balance);
+                printf("[Parent] EMI %d successful -> balance = %d\n", r.amount, balance);
+            } else {
+                printf("[Parent] EMI %d failed -> balance = %d\n", r.amount, balance);
             }
         }
     }
 
     close(pipefd[0]);
-
     waitpid(p1, NULL, 0);
     waitpid(p2, NULL, 0);
     waitpid(p3, NULL, 0);
 
-    printf("Final balance = %d\n", balance);
-
+    printf("\nFinal balance = %d\n", balance);
     return 0;
 }
-
-
-// Initial balance = 500
-// [Deposit] Sent deposit request: 2000
-// [Parent] Deposit 2000 -> balance = 2500
-// [Withdrawal] Sent withdrawal request: 1200
-// [EMI] Sent EMI request: 800
-// [Parent] Withdrawal 1200 successful -> balance = 1300
-// [Parent] EMI 800 successful -> balance = 500
-// Final balance = 500
