@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
+#include <stdlib.h>//exit()
+#include <unistd.h>//fork(),write(),read(),pipe(),close()
+#include <sys/wait.h>//waitpid()
 
 typedef struct {
     int type;   // 1 = deposit, 2 = withdrawal, 3 = EMI
@@ -15,7 +15,7 @@ void deposit(int fd)
     r.type = 1;
     r.amount = 2000;
 
-    write(fd, &r, sizeof(r));
+    write(fd, &r, sizeof(r));//fd = where to write  //&r=what to write ,sizeof(r)=how many bytes
     printf("[Deposit] Sent deposit request: %d\n", r.amount);
 
     close(fd);
@@ -53,12 +53,12 @@ void emi(int fd)
 int main()
 {
     int pipefd[2];
-    pid_t p1, p2, p3;
+    pid_t p1, p2, p3;  //p1 → process ID of deposit child,p2 → process ID of withdrawal child,p3 → process ID of EMI child
 
-    int balance = 500;
+    int balance = 0;
     Request r;
 
-    if (pipe(pipefd) == -1) {
+    if (pipe(pipefd) == -1) {  //This creates the communication channel.
         perror("pipe");
         exit(1);
     }
@@ -66,7 +66,7 @@ int main()
     printf("Initial balance = %d\n", balance);
 
     /* Deposit child */
-    p1 = fork();
+    p1 = fork();  //creates a new process.
 
     if (p1 == 0) {
         close(pipefd[0]);   // child doesn't read
@@ -95,7 +95,7 @@ int main()
     /*
      * Parent receives requests from children
      */
-    while (read(pipefd[0], &r, sizeof(r)) > 0) {
+    while (read(pipefd[0], &r, sizeof(r)) > 0) {  //"Keep reading requests from the pipe as long as there is data."
 
         if (r.type == 1) {
             balance += r.amount;
@@ -141,3 +141,13 @@ int main()
 
     return 0;
 }
+
+
+// Initial balance = 500
+// [Deposit] Sent deposit request: 2000
+// [Parent] Deposit 2000 -> balance = 2500
+// [Withdrawal] Sent withdrawal request: 1200
+// [EMI] Sent EMI request: 800
+// [Parent] Withdrawal 1200 successful -> balance = 1300
+// [Parent] EMI 800 successful -> balance = 500
+// Final balance = 500
