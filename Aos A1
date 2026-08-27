@@ -1,425 +1,143 @@
-//updated one
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <sys/wait.h>
-#include <string.h>
-
-#define N 4
-#define BS 32
-#define K 0xBEEF
-
-typedef struct b {
-    int f,d,n;
-    struct b *fw,*bw;
-    char data[BS];
-} B;
 
 typedef struct {
-    B buf[N];
-    B *fl;
-    int bal,dep,wdr,emi,rdy;
-} S;
+    int type;   // 1 = deposit, 2 = withdrawal, 3 = EMI
+    int amount;
+} Request;
 
-S *s;
-int mid;
-
-void init() {
-    int i;
-    for(i=0;i<N;i++){
-        s->buf[i].f=s->buf[i].d=s->buf[i].n=-1;
-        s->buf[i].fw=&s->buf[(i+1)%N];
-        s->buf[i].bw=&s->buf[(i-1+N)%N];
-        memset(s->buf[i].data,0,BS);
-    }
-    s->fl=&s->buf[0];
-}
-
-B *getblk(int d,int n) {
-    B *bp; int t=0;
-    while(1){
-        for(bp=s->buf;bp<&s->buf[N];bp++)
-            if(bp->d==d&&bp->n==n){
-                if(bp->f&1){bp->f|=2;sleep(1);continue;}
-                bp->f|=1;
-                bp->bw->fw=bp->fw;bp->fw->bw=bp->bw;
-                if(s->fl==bp)s->fl=(bp->fw==bp)?NULL:bp->fw;
-                printf("[%d] cache hit\n",getpid());
-                return bp;
-            }
-        if(!s->fl){
-            printf("[%d] 4th: freelist empty -> sleep\n",getpid());
-            sleep(2); if(++t>5)return NULL; continue;
-        }
-        bp=s->fl;
-        s->fl=(bp->fw==bp)?NULL:bp->fw;
-        if(s->fl){bp->bw->fw=bp->fw;bp->fw->bw=bp->bw;}
-        bp->f=1;bp->d=d;bp->n=n;
-        printf("[%d] 5th: took free buf\n",getpid());
-        return bp;
-    }
-}
-
-void brelse(B *bp) {
-    bp->f&=~3;
-    if(!s->fl){s->fl=bp;bp->fw=bp->bw=bp;}
-    else{bp->fw=s->fl;bp->bw=s->fl->bw;s->fl->bw->fw=bp;s->fl->bw=bp;s->fl=bp;}
-    printf("[%d] released\n",getpid());
-}
-
-void dep() {
-    B *bp=getblk(getpid(),1);
-    if(!bp)exit(1);
-    sprintf(bp->data,"DEP %d",s->dep);
-    s->bal+=s->dep;
-    printf("[Deposit] deposit %d bal=%d\n",getpid(),s->dep,s->bal);
-    brelse(bp); s->rdy=1; exit(0);
-}
-
-void wdr() {
-    while(!s->rdy)sleep(1);
-    if(s->bal<s->wdr){printf("[%d] wdr sleep (low bal)\n",getpid());sleep(3);}
-    B *bp=getblk(getpid(),2);
-    if(!bp)exit(1);
-    if(s->bal>=s->wdr){s->bal-=s->wdr;sprintf(bp->data,"WDR %d",s->wdr);
-        printf("[Withdrawl] wdr ok bal=%d\n",getpid(),s->bal);}
-    else printf("[Withdrawl] wdr fail\n",getpid());
-    brelse(bp); exit(0);
-}
-
-void emi() {
-    while(!s->rdy)sleep(1);
-    if(s->bal<s->emi){printf("[%d] emi sleep (low bal)\n",getpid());sleep(3);}
-    B *bp=getblk(getpid(),3);
-    if(!bp)exit(1);
-    if(s->bal>=s->emi){s->bal-=s->emi;sprintf(bp->data,"EMI %d",s->emi);
-        printf("[EMI] emi ok bal=%d\n",getpid(),s->bal);}
-    else printf("[EMI] emi fail\n",getpid());
-    brelse(bp); exit(0);
-}
-
-int main() {
-    mid=shmget(K,sizeof(S),IPC_CREAT|0666);
-    s=shmat(mid,0,0);
-    memset(s,0,sizeof(S));
-    s->bal=500;s->dep=2000;s->wdr=1200;s->emi=800;
-    init();
-    printf("init bal=%d\n",s->bal);
-    if(!fork())dep();
-    if(!fork())wdr();
-    if(!fork())emi();
-    wait(0);wait(0);wait(0);
-    printf("final bal=%d\n",s->bal);
-    shmdt(s);shmctl(mid,IPC_RMID,0);
-    return 0;
-}
-
-
-
-
-
-//Best approach
-/*
- * Banking Transactions illustrating 4th & 5th Buffer Allocation Scenarios
- * Processes : Deposit, Withdraw, EMI
- * IPC      : Shared Memory + Free-List + Buffer-Block List
- * System calls: fork, shmget, shmat, shmdt, shmctl, wait, sleep, ...
- *
- * Compile : gcc banking_buffers.c -o banking_buffers
- * Run     : ./banking_buffers
- */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/wait.h>
-#include <string.h>
-#include <time.h>
-
-#define NBUF          4          /* number of buffer headers / blocks */
-#define BLKSIZE       64
-#define KEY           0x1234
-
-/* ---------- Buffer-header (free-list node) ---------- */
-typedef struct buf {
-    int            b_flags;      /* B_BUSY, B_WANTED, ... */
-    int            b_dev;        /* "device" = process id that owns it */
-    int            b_blkno;      /* logical block number */
-    struct buf    *b_forw;       /* free-list forward */
-    struct buf    *b_back;       /* free-list backward */
-    char           b_data[BLKSIZE];
-} BUFFER;
-
-/* flags */
-#define B_BUSY   0x01
-#define B_WANTED 0x02
-#define B_DONE   0x04
-
-/* ---------- Shared region ---------- */
-typedef struct {
-    BUFFER      buffers[NBUF];   /* buffer-block list */
-    BUFFER     *freelist;        /* head of free list  */
-    int         balance;         /* bank account balance */
-    int         withdraw_amt;
-    int         emi_amt;
-    int         deposit_amt;
-    int         race_ready;      /* set by deposit to start race */
-    int         finished;        /* all children finished */
-} SHARED;
-
-SHARED *shm;
-int     shmid;
-
-/* ---------- Free-list helpers (classic Unix style) ---------- */
-void init_freelist(void)
+void deposit(int fd)
 {
-    int i;
-    for (i = 0; i < NBUF; i++) {
-        shm->buffers[i].b_flags  = 0;
-        shm->buffers[i].b_dev    = -1;
-        shm->buffers[i].b_blkno  = -1;
-        shm->buffers[i].b_forw   = &shm->buffers[(i+1)%NBUF];
-        shm->buffers[i].b_back   = &shm->buffers[(i-1+NBUF)%NBUF];
-        memset(shm->buffers[i].b_data, 0, BLKSIZE);
-    }
-    /* circular free list */
-    shm->freelist = &shm->buffers[0];
-    printf("[INIT] Free list created with %d buffers\n", NBUF);
-}
+    Request r;
 
-/* Allocate a buffer – implements scenarios 4 & 5 */
-BUFFER *getblk(int dev, int blkno)
-{
-    BUFFER *bp;
-    int     tries = 0;
+    r.type = 1;
+    r.amount = 2000;
 
-    while (1) {
-        /* Search hash-queue (simplified: linear scan of buffer list) */
-        for (bp = shm->buffers; bp < &shm->buffers[NBUF]; bp++) {
-            if (bp->b_dev == dev && bp->b_blkno == blkno) {
-                if (bp->b_flags & B_BUSY) {
-                    /* buffer found but busy → sleep (scenario 2, omitted here) */
-                    printf("  [PID %d] Buffer busy, sleeping...\n", getpid());
-                    bp->b_flags |= B_WANTED;
-                    sleep(1);
-                    continue;
-                }
-                /* buffer found free → take it */
-                bp->b_flags |= B_BUSY;
-                /* remove from free list */
-                bp->b_back->b_forw = bp->b_forw;
-                bp->b_forw->b_back = bp->b_back;
-                if (shm->freelist == bp)
-                    shm->freelist = (bp->b_forw == bp) ? NULL : bp->b_forw;
-                printf("  [PID %d] Buffer found in cache (scenario 1)\n", getpid());
-                return bp;
-            }
-        }
+    write(fd, &r, sizeof(r));
+    printf("[Deposit] Sent deposit request: %d\n", r.amount);
 
-        /* Buffer not in cache – try free list */
-        if (shm->freelist == NULL) {
-            /* **** 4th scenario **** */
-            printf("  [PID %d] *** 4th SCENARIO *** free list empty → SLEEP\n",
-                   getpid());
-            sleep(2);               /* simulate sleep on freelist */
-            tries++;
-            if (tries > 5) {
-                printf("  [PID %d] Giving up after many retries\n", getpid());
-                return NULL;
-            }
-            continue;               /* retry after wake-up */
-        }
-
-        /* **** 5th scenario **** – free buffer available */
-        bp = shm->freelist;
-        /* take first free buffer */
-        if (bp->b_forw == bp) {          /* last free buffer */
-            shm->freelist = NULL;
-        } else {
-            shm->freelist = bp->b_forw;
-            bp->b_back->b_forw = bp->b_forw;
-            bp->b_forw->b_back = bp->b_back;
-        }
-        bp->b_flags  = B_BUSY;
-        bp->b_dev    = dev;
-        bp->b_blkno  = blkno;
-        printf("  [PID %d] *** 5th SCENARIO *** obtained free buffer from free-list\n",
-               getpid());
-        return bp;
-    }
-}
-
-/* Release buffer back to free list */
-void brelse(BUFFER *bp)
-{
-    if (bp->b_flags & B_WANTED)
-        printf("  [PID %d] Waking processes waiting for this buffer\n", getpid());
-
-    bp->b_flags &= ~(B_BUSY | B_WANTED);
-    /* insert at head of free list (LRU simplified) */
-    if (shm->freelist == NULL) {
-        shm->freelist = bp;
-        bp->b_forw = bp->b_back = bp;
-    } else {
-        bp->b_forw = shm->freelist;
-        bp->b_back = shm->freelist->b_back;
-        shm->freelist->b_back->b_forw = bp;
-        shm->freelist->b_back = bp;
-        shm->freelist = bp;
-    }
-    printf("  [PID %d] Buffer released to free-list\n", getpid());
-}
-
-/* ---------- Process functions ---------- */
-void deposit_process(void)
-{
-    BUFFER *bp;
-    printf("\n=== DEPOSIT PROCESS (PID %d) started ===\n", getpid());
-
-    bp = getblk(getpid(), 1);           /* allocate a buffer */
-    if (!bp) exit(1);
-
-    sprintf(bp->b_data, "DEPOSIT %d", shm->deposit_amt);
-    printf("  Depositing Rs.%d into account\n", shm->deposit_amt);
-    shm->balance += shm->deposit_amt;
-    printf("  New balance = Rs.%d\n", shm->balance);
-
-    sleep(1);
-    brelse(bp);
-
-    /* Signal that deposit is done – start the race */
-    shm->race_ready = 1;
-    printf("=== DEPOSIT finished – race condition enabled ===\n\n");
+    close(fd);
     exit(0);
 }
 
-void withdraw_process(void)
+void withdrawal(int fd)
 {
-    BUFFER *bp;
-    printf("\n=== WITHDRAW PROCESS (PID %d) started ===\n", getpid());
+    Request r;
 
-    /* Wait until deposit finishes (race starts) */
-    while (!shm->race_ready)
-        sleep(1);
+    r.type = 2;
+    r.amount = 1200;
 
-    printf("  Withdraw trying to take Rs.%d (current bal=%d)\n",
-           shm->withdraw_amt, shm->balance);
+    write(fd, &r, sizeof(r));
+    printf("[Withdrawal] Sent withdrawal request: %d\n", r.amount);
 
-    if (shm->balance < shm->withdraw_amt) {
-        printf("  *** Insufficient balance → WITHDRAW goes to SLEEP ***\n");
-        sleep(3);                       /* sleep due to insufficient funds */
-        printf("  Withdraw woken up after deposit\n");
-    }
-
-    bp = getblk(getpid(), 2);
-    if (!bp) exit(1);
-
-    /* Critical section – race possible here */
-    if (shm->balance >= shm->withdraw_amt) {
-        shm->balance -= shm->withdraw_amt;
-        sprintf(bp->b_data, "WITHDRAW %d", shm->withdraw_amt);
-        printf("  WITHDRAW successful. New balance = Rs.%d\n", shm->balance);
-    } else {
-        printf("  WITHDRAW failed – still insufficient funds\n");
-    }
-
-    brelse(bp);
-    printf("=== WITHDRAW finished ===\n");
+    close(fd);
     exit(0);
 }
 
-void emi_process(void)
+void emi(int fd)
 {
-    BUFFER *bp;
-    printf("\n=== EMI PROCESS (PID %d) started ===\n", getpid());
+    Request r;
 
-    while (!shm->race_ready)
-        sleep(1);
+    r.type = 3;
+    r.amount = 800;
 
-    printf("  EMI trying to deduct Rs.%d (current bal=%d)\n",
-           shm->emi_amt, shm->balance);
+    write(fd, &r, sizeof(r));
+    printf("[EMI] Sent EMI request: %d\n", r.amount);
 
-    if (shm->balance < shm->emi_amt) {
-        printf("  *** Insufficient balance → EMI goes to SLEEP ***\n");
-        sleep(3);
-        printf("  EMI woken up after deposit\n");
-    }
-
-    bp = getblk(getpid(), 3);
-    if (!bp) exit(1);
-
-    /* Critical section – race with withdraw */
-    if (shm->balance >= shm->emi_amt) {
-        shm->balance -= shm->emi_amt;
-        sprintf(bp->b_data, "EMI %d", shm->emi_amt);
-        printf("  EMI successful. New balance = Rs.%d\n", shm->balance);
-    } else {
-        printf("  EMI failed – still insufficient funds\n");
-    }
-
-    brelse(bp);
-    printf("=== EMI finished ===\n");
+    close(fd);
     exit(0);
 }
 
-/* ---------- Main ---------- */
-int main(void)
+int main()
 {
-    pid_t pid_d, pid_w, pid_e;
+    int pipefd[2];
+    pid_t p1, p2, p3;
 
-    /* Create shared memory */
-    shmid = shmget(KEY, sizeof(SHARED), IPC_CREAT | 0666);
-    if (shmid < 0) {
-        perror("shmget");
-        exit(1);
-    }
-    shm = (SHARED *)shmat(shmid, NULL, 0);
-    if (shm == (void *)-1) {
-        perror("shmat");
+    int balance = 500;
+    Request r;
+
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
         exit(1);
     }
 
-    /* Initialise shared data */
-    memset(shm, 0, sizeof(SHARED));
-    shm->balance      = 1200;          /* initial balance */
-    shm->deposit_amt  = 2000;
-    shm->withdraw_amt = 1200;
-    shm->emi_amt      = 800;
-    shm->race_ready   = 0;
+    printf("Initial balance = %d\n", balance);
 
-    init_freelist();
-    printf("Initial Account Balance = Rs.%d\n", shm->balance);
-    printf("Deposit  = %d,  Withdraw = %d,  EMI = %d\n\n",
-           shm->deposit_amt, shm->withdraw_amt, shm->emi_amt);
+    /* Deposit child */
+    p1 = fork();
 
-    /* Create the three processes */
-    pid_d = fork();
-    if (pid_d == 0) deposit_process();
+    if (p1 == 0) {
+        close(pipefd[0]);   // child doesn't read
+        deposit(pipefd[1]);
+    }
 
-    pid_w = fork();
-    if (pid_w == 0) withdraw_process();
+    /* Withdrawal child */
+    p2 = fork();
 
-    pid_e = fork();
-    if (pid_e == 0) emi_process();
+    if (p2 == 0) {
+        close(pipefd[0]);
+        withdrawal(pipefd[1]);
+    }
 
-    /* Parent waits for all children */
-    wait(NULL);
-    wait(NULL);
-    wait(NULL);
+    /* EMI child */
+    p3 = fork();
 
-    printf("\n========== FINAL STATE ==========\n");
-    printf("Final Account Balance = Rs.%d\n", shm->balance);
-    printf("Free-list head = %p\n", (void *)shm->freelist);
-    printf("=================================\n");
+    if (p3 == 0) {
+        close(pipefd[0]);
+        emi(pipefd[1]);
+    }
 
-    /* Cleanup */
-    shmdt(shm);
-    shmctl(shmid, IPC_RMID, NULL);
+    /* Parent doesn't write */
+    close(pipefd[1]);
+
+    /*
+     * Parent receives requests from children
+     */
+    while (read(pipefd[0], &r, sizeof(r)) > 0) {
+
+        if (r.type == 1) {
+            balance += r.amount;
+
+            printf("[Parent] Deposit %d -> balance = %d\n",
+                   r.amount, balance);
+        }
+
+        else if (r.type == 2) {
+            if (balance >= r.amount) {
+                balance -= r.amount;
+
+                printf("[Parent] Withdrawal %d successful -> balance = %d\n",
+                       r.amount, balance);
+            }
+            else {
+                printf("[Parent] Withdrawal %d failed -> balance = %d\n",
+                       r.amount, balance);
+            }
+        }
+
+        else if (r.type == 3) {
+            if (balance >= r.amount) {
+                balance -= r.amount;
+
+                printf("[Parent] EMI %d successful -> balance = %d\n",
+                       r.amount, balance);
+            }
+            else {
+                printf("[Parent] EMI %d failed -> balance = %d\n",
+                       r.amount, balance);
+            }
+        }
+    }
+
+    close(pipefd[0]);
+
+    waitpid(p1, NULL, 0);
+    waitpid(p2, NULL, 0);
+    waitpid(p3, NULL, 0);
+
+    printf("Final balance = %d\n", balance);
+
     return 0;
 }
