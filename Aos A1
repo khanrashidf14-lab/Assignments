@@ -59,7 +59,7 @@ int main()
     Request r;
 
     if (pipe(pipefd) == -1) {  //This creates the communication channel.
-        perror("pipe");
+        perror("pipe");  //perror() =print an error message explaining why a system/library function failed.
         exit(1);
     }
 
