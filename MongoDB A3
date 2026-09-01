@@ -108,7 +108,7 @@ db.transactions.insertMany([
 db.employees.find({ designation: { $in: ["manager", "floor supervisor"] } })
 
 // 2. Name ending with a specific string (example: ends with "e")
-db.employees.find({ name: { $regex: /e$/i } }).pretty()
+db.employees.find({ name: { $regex: /e$/i } }).pretty()             //$regex: /e$ //searches text using a pattern/ends with e
 
 // 3. Salary > 60000 (using cursor)
 const cursor = db.employees.find({ salary: { $gt: 60000 } }, { name: 1, _id: 0 });
@@ -149,8 +149,8 @@ db.transactions.aggregate([
   { $group: { _id: "$emp.designation" } }
 ])
 
-// 10. Total quantity of a particular item (e.g. "Wireless Mouse") using Map-Reduce
-db.transactions.mapReduce(
+// 10. Total quantity of a particular item using Map-Reduce
+db.transactions.mapReduce(          //Map function
   function() {
     this.items.forEach(function(i) {
       if (i.item === "Wireless Mouse") {
@@ -158,10 +158,8 @@ db.transactions.mapReduce(
       }
     });
   },
-  function(key, values) {
-    return Array.sum(values);
+  function(key, values) {     //Reduce function
+    return Array.sum(values);   //Array.sum(values) adds them together
   },
   { out: { inline: 1 } }
 )
-
-
