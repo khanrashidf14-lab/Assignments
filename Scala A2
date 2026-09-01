@@ -29,8 +29,8 @@ object DayOfWeek{
 1.
 
 import scala.util.Random 						 //for random nos.
-object PerfectNumbers {
-  def isPerfect(n: Int): Boolean = {
+object PerfectNumbers {                         // Perfect no. // a positive number equal to the sum of its proper divisors—the divisors excluding the number itself. eg. 6: 1 + 2 + 3 = 6
+  def isPerfect(n: Int): Boolean = {            
     if (n <= 1) return false					//0 and 1 are not included
     var sum = 0
 
@@ -166,18 +166,16 @@ object ArithmeticOperations {
 
   def main(args: Array[String]): Unit = {
 
-    // Read two numbers from the user
-    print("Enter first number: ")
-    val num1 = readLine().toDouble
+    println("Enter first number: ")
+    val num1 = readLine().toDouble                    //.toDouble = text to decimal
 
-    print("Enter second number: ")
+    println("Enter second number: ")
     val num2 = readLine().toDouble
 
-    // Read operator
+
     print("Enter operator (+, -, *, /): ")
     val operator = readLine().charAt(0)
 
-    // Pattern matching
     val result = operator match {
       case '+' => num1 + num2
       case '-' => num1 - num2
@@ -187,9 +185,9 @@ object ArithmeticOperations {
           num1 / num2
         else {
           println("Error: Cannot divide by zero.")
-          Double.NaN
+          Double.NaN                                //means not a no.
         }
-      case _ =>
+      case _ =>                                     //matches anything else than that was required above
         println("Invalid operator.")
         Double.NaN
     }
@@ -198,47 +196,39 @@ object ArithmeticOperations {
   }
 }
 
-//fymsc38@client13:~/scala/A2$ scala ArithmeticOperations
-//Enter first number: 6
-//Enter second number: 4
-//Enter operator (+, -, *, /): /
-//Result: 1.5
+
 
 
 
 2.
 
-import scala.io.StdIn.readInt
+import scala.io.StdIn.readInt         //read int from users input
 
-object ArmstrongNumber {
+object ArmstrongNumber {        //Armstrong no. equal to sum of each of its digits raised to the power of total no. of digits  eg.1³ + 5³ + 3³ = 153      
 
-  // User-defined function to check Armstrong number
+  
   def isArmstrong(num: Int): Boolean = {
-    val digits = num.toString.length
+    val digits = num.toString.length        // converts the no. to txt & counts its chars
     var temp = num
     var sum = 0
 
     while (temp > 0) {
       val digit = temp % 10
-      sum += Math.pow(digit, digits).toInt
-      temp /= 10
+      sum += Math.pow(digit, digits).toInt        // raises digit to the power of  total no. of digits and adds it to sum
+      temp /= 10                                  //removes last digit from temp
     }
 
-    sum == num
+    sum == num                                 //compares calculated sum with original no.
   }
 
   def main(args: Array[String]): Unit = {
 
-    print("Enter an integer: ")
+    println("Enter an integer: ")
     val num = readInt()
 
-    if (isArmstrong(num))
+    if (isArmstrong(num))                           //calls the method
       println(s"$num is an Armstrong Number")
     else
       println(s"$num is not an Armstrong Number")
   }
 }
-
-//fymsc38@client13:~/scala/A2$ scala ArmstrongNumber
-//Enter an integer: 4
-//4 is an Armstrong Number
