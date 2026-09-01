@@ -1,3 +1,30 @@
+import scala.io.StdIn
+object DayOfWeek{
+    def getDayName(day:Int):String = day match{
+        case 1=>"Monday"
+        case 2=>"Tuesday"
+        case 3=>"Wednesday"
+        case 4=>"Thursday"
+        case 5=>"Friday"
+        case 6=>"Saturday"
+        case 7=>"Sunday"
+        case _=>"Invalid Day"
+    }
+    def main(args:Array[String]): Unit = {
+        print("Enter day number(1-7):")
+        val dayNum = StdIn.readInt()
+        println(s"Day:${getDayName(dayNum)}")
+    }
+}
+
+
+// scala DayOfWeek:
+//Enter day number(1-7):3
+//Day:Wednesday
+
+
+
+
 1.
 
 import scala.util.Random  //Perfect numbers  (1 to 1000): 6 28 496
@@ -131,3 +158,90 @@ object FibonacciSeries {
     printFibonacciUpTo(limit)
   }
 }
+
+
+
+1.
+
+import scala.io.StdIn.readLine
+
+object ArithmeticOperations {
+
+  def main(args: Array[String]): Unit = {
+
+    // Read two numbers from the user
+    print("Enter first number: ")
+    val num1 = readLine().toDouble
+
+    print("Enter second number: ")
+    val num2 = readLine().toDouble
+
+    // Read operator
+    print("Enter operator (+, -, *, /): ")
+    val operator = readLine().charAt(0)
+
+    // Pattern matching
+    val result = operator match {
+      case '+' => num1 + num2
+      case '-' => num1 - num2
+      case '*' => num1 * num2
+      case '/' =>
+        if (num2 != 0)
+          num1 / num2
+        else {
+          println("Error: Cannot divide by zero.")
+          Double.NaN
+        }
+      case _ =>
+        println("Invalid operator.")
+        Double.NaN
+    }
+
+    println(s"Result: $result")
+  }
+}
+
+//fymsc38@client13:~/scala/A2$ scala ArithmeticOperations
+//Enter first number: 6
+//Enter second number: 4
+//Enter operator (+, -, *, /): /
+//Result: 1.5
+
+
+
+2.
+
+import scala.io.StdIn.readInt
+
+object ArmstrongNumber {
+
+  // User-defined function to check Armstrong number
+  def isArmstrong(num: Int): Boolean = {
+    val digits = num.toString.length
+    var temp = num
+    var sum = 0
+
+    while (temp > 0) {
+      val digit = temp % 10
+      sum += Math.pow(digit, digits).toInt
+      temp /= 10
+    }
+
+    sum == num
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    print("Enter an integer: ")
+    val num = readInt()
+
+    if (isArmstrong(num))
+      println(s"$num is an Armstrong Number")
+    else
+      println(s"$num is not an Armstrong Number")
+  }
+}
+
+//fymsc38@client13:~/scala/A2$ scala ArmstrongNumber
+//Enter an integer: 4
+//4 is an Armstrong Number
