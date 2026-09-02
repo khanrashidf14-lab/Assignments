@@ -141,7 +141,7 @@ db.transactions.aggregate([
   { $match: { amount: { $gt: 500 } } },
   { $lookup: {
       from: "employees",
-      localField: "emp_id",
+      localField: "emp_Id",
       foreignField: "_id",
       as: "emp"
   }},
