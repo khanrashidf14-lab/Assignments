@@ -1,1 +1,122 @@
+1.
 
+object StringRotation {
+  def areRotations(s1: String, s2: String): Boolean = {
+    if (s1.length != s2.length) false
+    else (s1 + s1).contains(s2)
+  }
+
+  def main(args: Array[String]): Unit = {
+    val s1 = "ABCD"
+    val s2 = "CDAB"
+    println(s"Are \"$s1\" and \"$s2\" rotations? ${areRotations(s1, s2)}")
+
+    val s3 = "ABCD"
+    val s4 = "ACBD"
+    println(s"Are \"$s3\" and \"$s4\" rotations? ${areRotations(s3, s4)}")
+  }
+}
+
+
+
+
+2.
+
+object ArrayContainsTarget {
+  def main(args: Array[String]): Unit = {
+    val arr = Array("apple", "banana", "apricot", "grape", "pineapple", "mango")
+    println("Enter target string: ")
+    val target = scala.io.StdIn.readLine()
+
+    val result = arr.filter(_.contains(target))
+    if (result.isEmpty)
+      println("No elements contain the target string.")
+    else {
+      print("Elements containing the target:")
+      result.foreach(println)
+    }
+  }
+}
+
+
+
+
+3.
+
+object ReverseWords {
+  def reverseWords(str: String): String = {
+    str.split("\\s+").map(_.reverse).mkString(" ")
+  }
+
+  def main(args: Array[String]): Unit = {
+    val input = "Hello World from Scala"
+    println(s"Original : $input")
+    println(s"Reversed : ${reverseWords(input)}")
+  }
+}
+
+
+
+4.
+
+object EqualLengthAppend {
+  def appendEqualLength(s1: String, s2: String): String = {
+    val len = math.min(s1.length, s2.length)
+    val a = if (s1.length > len) s1.substring(s1.length - len) else s1
+    val b = if (s2.length > len) s2.substring(s2.length - len) else s2
+    a + b
+  }
+
+  def main(args: Array[String]): Unit = {
+    println(appendEqualLength("Hello", "World"))     
+    println(appendEqualLength("Scala", "Language"))  
+    println(appendEqualLength("Programming", "Fun")) 
+  }
+}
+
+
+
+/* -------Set B----------  */
+1.
+
+object DuplicateChars {
+  def findDuplicates(str: String): Map[Char, Int] = {
+    str.groupBy(identity)
+       .view
+       .mapValues(_.length)
+       .filter { case (_, count) => count > 1 }
+       .toMap
+  }
+
+  def main(args: Array[String]): Unit = {
+    val s = "programming"
+    val duplicates = findDuplicates(s)
+    if (duplicates.isEmpty)
+      println("No duplicate characters found.")
+    else {
+      println("Duplicate characters and their counts:")
+      duplicates.foreach { case (ch, cnt) => println(s"$ch : $cnt") }
+    }
+  }
+}
+
+
+
+2.
+
+object RemoveOccurrences {
+  def removeAllOccurrences(s1: String, s2: String): String = {
+    if (s2.isEmpty) s1
+    else s1.replace(s2, "")
+  }
+
+  def main(args: Array[String]): Unit = {
+    print("Enter first string: ")
+    val s1 = scala.io.StdIn.readLine()
+    print("Enter second string: ")
+    val s2 = scala.io.StdIn.readLine()
+
+    val result = removeAllOccurrences(s1, s2)
+    println(s"Result after removal: $result")
+  }
+}
