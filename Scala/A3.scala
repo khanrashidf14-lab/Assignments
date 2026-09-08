@@ -87,3 +87,64 @@ object PalindromeCheck {
     }
   }
 }
+
+
+
+
+/* -------Set B---------*/
+
+1.
+
+import scala.io.StdIn.readLine
+
+object VowelsConsonants {
+
+  // User-defined function to count vowels and consonants
+  def countVowelsConsonants(str: String): (Int, Int) = {
+    var vowels = 0
+    var consonants = 0
+
+    for (ch <- str.toLowerCase) {
+      if ("aeiou".contains(ch))
+        vowels += 1
+      else if (ch >= 'a' && ch <= 'z')
+        consonants += 1
+    }
+
+    (vowels, consonants)
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    print("Enter a string: ")
+    val str = readLine()
+
+    val (vowels, consonants) = countVowelsConsonants(str)
+
+    println(s"Total number of vowels: $vowels")
+    println(s"Total number of consonants: $consonants")
+  }
+}
+
+
+
+
+
+2.
+
+import scala.io.StdIn.readLine
+
+object ReplaceCharacters {
+
+  def main(args: Array[String]): Unit = {
+
+    print("Enter a string: ")
+    val str = readLine()
+
+    val result = str.map(_ => '-')
+
+    println("String after replacing characters: " + result)
+  }
+}
+
+
