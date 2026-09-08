@@ -158,6 +158,8 @@ object FibonacciSeries {
 
 
 
+
+/* -------Set B---------*/
 1.
 
 import scala.io.StdIn.readLine
