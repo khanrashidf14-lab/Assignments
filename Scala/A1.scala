@@ -1,4 +1,4 @@
-ssobject HelloWorld{
+object HelloWorld{
   def main (args:Array[string]):Unit={
     println("Hello,World!")
   }
