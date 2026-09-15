@@ -138,14 +138,14 @@ db.transactions.find(
 
 // 9. Designations of employees who made transactions > 500
 db.transactions.aggregate([
-  { $match: { amount: { $gt: 500 } } },
+  { $match: { amount: { $gt: 500 } } },    //filters transactions
   { $lookup: {
       from: "employees",
       localField: "emp_Id",
       foreignField: "_id",
       as: "emp"
   }},
-  { $unwind: "$emp" },
+  { $unwind: "$emp" },      //turn into individual docs
   { $group: { _id: "$emp.designation" } }
 ])
 
