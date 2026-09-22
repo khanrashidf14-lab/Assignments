@@ -42,7 +42,7 @@ object RemoveChar {
       println(s"Invalid position! Position must be between 0 and ${str.length - 1}")
       str   // return original string if invalid
     } else {
-      str.take(pos) + str.drop(pos + 1)
+      str.take(pos) + str.drop(pos + 1) //for getting only required output
     }
   }
 
