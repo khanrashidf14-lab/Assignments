@@ -105,25 +105,64 @@ object SearchElement {
 
 2.
 
-object MergeAndRemoveDuplicates {
+import scala.io.StdIn
+
+object MergeList{
   def main(args: Array[String]): Unit = {
-    val list1 = List(1, 2, 3, 4, 5, 2)
-    val list2 = List(4, 5, 6, 7, 8, 3)
+
+    print("Enter size of List 1: ")
+    val n1 = StdIn.readInt()
+
+    var list1 = List[Int]()
+    var i = 0
+
+    while (i < n1) {
+      print("Enter element " + (i + 1) + ": ")
+      list1 = list1 :+ StdIn.readInt()
+      i += 1
+    }
+
+    print("Enter size of List 2: ")
+    val n2 = StdIn.readInt()
+
+    var list2 = List[Int]()
+    i = 0
+
+    while (i < n2) {
+      print("Enter element " + (i + 1) + ": ")
+      list2 = list2 :+ StdIn.readInt()
+      i += 1
+    }
 
     println("List 1: " + list1)
     println("List 2: " + list2)
 
-    // Merge the two lists
-    var mergedList = list1 ++ list2
-    println("Merged List: " + mergedList)
+    print("Enter a new element: ")
+    val element = StdIn.readInt()
 
-    // Add a new element
-    mergedList = mergedList :+ 9
-    println("After adding new element (9): " + mergedList)
+    val merged = list1 ++ list2 :+ element
 
-    // Remove all duplicate elements
-    val uniqueList = mergedList.distinct
-    println("Final List (after removing duplicates): " + uniqueList)
+    var result = List[Int]()
+    i = 0
+
+    while (i < merged.length) {
+      var count = 0
+      var j = 0
+
+      while (j < merged.length) {
+        if (merged(i) == merged(j)) {
+          count += 1
+        }
+        j += 1
+      }
+
+      if (count == 1) {
+        result = result :+ merged(i)
+      }
+
+      i += 1
+    }
+
+    println("Final List: " + result)
   }
 }
-
