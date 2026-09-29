@@ -1,0 +1,148 @@
+1.
+object ArraySum {
+  def main(args: Array[String]): Unit = {
+    val arr = Array(10, 20, 30, 40, 50)
+
+    // Using sum()
+    val sum1 = arr.sum
+    println(s"Sum using sum(): $sum1")
+
+    // Using for-loop
+    var sum2 = 0
+    for (x <- arr) {
+      sum2 += x
+    }
+    println(s"Sum using for-loop: $sum2")
+  }
+}
+
+
+
+
+2.
+import scala.io.StdIn
+
+object ArrayAverage {
+  def main(args: Array[String]): Unit = {
+    print("Enter number of elements: ")
+    val n = StdIn.readInt()
+
+    val arr = new Array[Int](n)
+    println(s"Enter $n integers:")
+    for (i <- 0 until n) {
+      arr(i) = StdIn.readInt()
+    }
+
+    if (n == 0) {
+      println("Average: 0.0 (empty array)")
+    } else {
+      val avg = arr.sum.toDouble / n
+      println(s"Average: $avg")
+    }
+  }
+}
+
+
+
+
+
+3.
+object LastThreeSum {
+  def sumLastThree(arr: Array[Int]): Int = {
+    if (arr.isEmpty) 0
+    else if (arr.length < 3) arr.sum
+    else arr.takeRight(3).sum
+  }
+
+  def main(args: Array[String]): Unit = {
+    println(sumLastThree(Array(1, 2, 3, 4, 5)))   // 12
+    println(sumLastThree(Array(10, 20)))          // 30
+    println(sumLastThree(Array()))                // 0
+    println(sumLastThree(Array(7)))               // 7
+  }
+}
+
+
+
+
+4.
+object NextGreater {
+  def replaceWithNextGreater(arr: Array[Int]): Array[Int] = {
+    if (arr.isEmpty) return arr
+    val result = arr.clone()
+    var maxSoFar = -1
+
+    // Traverse from right to left
+    for (i <- arr.length - 1 to 0 by -1) {
+      val current = result(i)
+      result(i) = maxSoFar
+      if (current > maxSoFar) maxSoFar = current
+    }
+    result
+  }
+
+  def main(args: Array[String]): Unit = {
+    val original = Array(58, 27, 100, 24, -5, 2, -6)
+    println("Original array: " + original.mkString(", "))
+
+    val modified = replaceWithNextGreater(original)
+    println("Modified array: " + modified.mkString(", "))
+    // Expected: 100, 100, 24, 2, 2, -6, -1
+  }
+}
+
+
+
+
+5.
+object ListPalindrome {
+  def isPalindrome[A](list: List[A]): Boolean = {
+    list == list.reverse
+  }
+
+  def main(args: Array[String]): Unit = {
+    println(isPalindrome(List(1, 2, 3, 2, 1)))   // true
+    println(isPalindrome(List("a", "b", "c")))   // false
+    println(isPalindrome(List(1)))               // true
+    println(isPalindrome(List.empty[Int]))       // true
+  }
+}
+
+
+
+
+6.
+object CountOccurrences {
+  def countOccurrences[A](list: List[A]): Map[A, Int] = {
+    list.groupBy(identity).view.mapValues(_.size).toMap
+  }
+
+  def main(args: Array[String]): Unit = {
+    val list = List(1, 2, 2, 3, 1, 4, 2, 3, 1)
+    val counts = countOccurrences(list)
+    println(counts)
+    // Example output: Map(1 -> 3, 2 -> 3, 3 -> 2, 4 -> 1)
+  }
+}
+
+
+
+7.
+object MaxValueKeys {
+  def keysWithMaxValue[K, V](map: Map[K, V])(implicit ord: Ordering[V]): Set[K] = {
+    if (map.isEmpty) Set.empty
+    else {
+      val maxVal = map.values.max
+      map.collect { case (k, v) if v == maxVal => k }.toSet
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val original = Map("Red" -> 1, "Green" -> 4, "Blue" -> 3, "Orange" -> 4)
+    println("Original map: " + original)
+
+    val result = keysWithMaxValue(original)
+    println("The keys with the maximum value are: " + result)
+    // Expected: Set(Green, Orange)
+  }
+}
