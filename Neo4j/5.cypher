@@ -228,6 +228,7 @@ CREATE (leo)-[:ACTED_IN]->(titanic)
 CREATE (kate)-[:ACTED_IN]->(titanic)
 CREATE (cillian)-[:ACTED_IN]->(oppenheimer)
 CREATE (tom)-[:ACTED_IN]->(dunkirk)
+CREATE (leo)-[:ACTED_IN]->(dunkirk)
 
 // Directing & Producing
 CREATE (nolan)-[:DIRECTED]->(inception)
