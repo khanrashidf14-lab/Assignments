@@ -178,6 +178,7 @@ int main() {
         printf("Child: Waiting on semaphore...\n");
         printf("Child: P (WAIT) operation started.\n");
 
+
         printf("Child: Semaphore signal received.\n");
         printf("Child: Parent has finished writing.\n\n");
 
