@@ -178,11 +178,6 @@ int main() {
         printf("Child: Waiting on semaphore...\n");
         printf("Child: P (WAIT) operation started.\n");
 
-        if (semop(semid, &p, 1) == -1) {
-            perror("semop P");
-            exit(1);
-        }
-
         printf("Child: Semaphore signal received.\n");
         printf("Child: Parent has finished writing.\n\n");
 
