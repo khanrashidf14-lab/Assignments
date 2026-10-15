@@ -1,1 +1,67 @@
+1.
 
+#include <stdio.h>
+#include <string.h>
+
+#define BUFFER_SIZE 64
+#define NUM_BUFFERS 3
+
+typedef struct {
+    char data[BUFFER_SIZE];
+    int used;
+} BufferBlock;
+
+void store_buffer(BufferBlock *buf, const char *str) {
+    strncpy(buf->data, str, BUFFER_SIZE - 1);
+    buf->data[BUFFER_SIZE - 1] = '\0';
+    buf->used = 1;
+    printf("Stored in buffer: \"%s\"\n", buf->data);
+}
+
+void display_buffer(const BufferBlock *buf) {
+    if (buf->used) {
+        printf("Buffer content: \"%s\"\n", buf->data);
+    } else {
+        printf("Buffer is empty / cleared.\n");
+    }
+}
+
+void clear_buffer(BufferBlock *buf) {
+    memset(buf->data, 0, BUFFER_SIZE);
+    buf->used = 0;
+    printf("Buffer cleared.\n");
+}
+
+int main() {
+    BufferBlock buffers[NUM_BUFFERS];
+
+    // Initialize
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        clear_buffer(&buffers[i]);
+    }
+
+    printf("=== Demonstrating Fixed-Size Buffer Blocks ===\n\n");
+
+    // Store data
+    store_buffer(&buffers[0], "Hello, Buffer Block 0!");
+    store_buffer(&buffers[1], "Operating Systems Lab - Buffer Demo");
+    store_buffer(&buffers[2], "Fixed size = 64 bytes");
+
+    printf("\n--- Displaying buffers ---\n");
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        printf("Buffer %d: ", i);
+        display_buffer(&buffers[i]);
+    }
+
+    // Clear one buffer
+    printf("\n--- Clearing Buffer 1 ---\n");
+    clear_buffer(&buffers[1]);
+
+    printf("\n--- Displaying after clear ---\n");
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        printf("Buffer %d: ", i);
+        display_buffer(&buffers[i]);
+    }
+
+    return 0;
+}
