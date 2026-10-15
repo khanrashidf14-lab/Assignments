@@ -7,4 +7,3 @@ scala:
 
 "cd /home/fymsc38/scala/A5" -to change directory
 
-budgets-poisons-floors
