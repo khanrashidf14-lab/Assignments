@@ -11,56 +11,591 @@ typedef struct {
     int used;
 } BufferBlock;
 
-void store_buffer(BufferBlock *buf, const char *str) {
-    strncpy(buf->data, str, BUFFER_SIZE - 1);
-    buf->data[BUFFER_SIZE - 1] = '\0';
-    buf->used = 1;
-    printf("Stored in buffer: \"%s\"\n", buf->data);
-}
-
-void display_buffer(const BufferBlock *buf) {
-    if (buf->used) {
-        printf("Buffer content: \"%s\"\n", buf->data);
-    } else {
-        printf("Buffer is empty / cleared.\n");
-    }
-}
-
 void clear_buffer(BufferBlock *buf) {
     memset(buf->data, 0, BUFFER_SIZE);
     buf->used = 0;
-    printf("Buffer cleared.\n");
 }
 
-int main() {
+void display_buffer(const BufferBlock *buf, int index) {
+    printf("Buffer %d: ", index);
+    if (buf->used == 0) {
+        printf("[EMPTY / CLEARED]\n");
+    } else {
+        printf("\"%s\" (used: %d bytes)\n", buf->data, buf->used);
+    }
+}
+
+int main(void) {
     BufferBlock buffers[NUM_BUFFERS];
 
-    // Initialize
+    /* Initialize all buffers to empty */
     for (int i = 0; i < NUM_BUFFERS; i++) {
         clear_buffer(&buffers[i]);
     }
 
-    printf("=== Demonstrating Fixed-Size Buffer Blocks ===\n\n");
+    printf("=== Storing data into buffers ===\n");
+    strncpy(buffers[0].data, "Hello from Buffer 0", BUFFER_SIZE - 1);
+    buffers[0].used = strlen(buffers[0].data);
 
-    // Store data
-    store_buffer(&buffers[0], "Hello, Buffer Block 0!");
-    store_buffer(&buffers[1], "Operating Systems Lab - Buffer Demo");
-    store_buffer(&buffers[2], "Fixed size = 64 bytes");
+    strncpy(buffers[1].data, "This is Buffer Block 1", BUFFER_SIZE - 1);
+    buffers[1].used = strlen(buffers[1].data);
 
-    printf("\n--- Displaying buffers ---\n");
+    strncpy(buffers[2].data, "Final Buffer Content", BUFFER_SIZE - 1);
+    buffers[2].used = strlen(buffers[2].data);
+
+    printf("\n=== Displaying buffers after store ===\n");
     for (int i = 0; i < NUM_BUFFERS; i++) {
-        printf("Buffer %d: ", i);
-        display_buffer(&buffers[i]);
+        display_buffer(&buffers[i], i);
     }
 
-    // Clear one buffer
-    printf("\n--- Clearing Buffer 1 ---\n");
+    printf("\n=== Clearing Buffer 1 ===\n");
     clear_buffer(&buffers[1]);
 
-    printf("\n--- Displaying after clear ---\n");
+    printf("\n=== Displaying buffers after clear ===\n");
     for (int i = 0; i < NUM_BUFFERS; i++) {
-        printf("Buffer %d: ", i);
-        display_buffer(&buffers[i]);
+        display_buffer(&buffers[i], i);
+    }
+
+    return 0;
+}
+
+2.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <ctype.h>
+
+void child_work(void) {
+    while (1) {
+        printf("Child (PID %d) is running...\n", getpid());
+        sleep(1);
+    }
+}
+
+int main(void) {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid == 0) {
+        /* Child process */
+        child_work();
+        exit(EXIT_SUCCESS);
+    }
+
+    /* Parent process */
+    char choice;
+    int status;
+
+    printf("Parent PID: %d | Child PID: %d\n", getpid(), pid);
+    printf("Commands: 's' = stop, 'r' = resume, 'q' = quit\n");
+
+    while (1) {
+        printf("Enter command: ");
+        if (scanf(" %c", &choice) != 1) {
+            while (getchar() != '\n');   /* clear invalid input */
+            printf("Invalid input. Try again.\n");
+            continue;
+        }
+        choice = tolower(choice);
+
+        switch (choice) {
+            case 's':
+                if (kill(pid, SIGSTOP) == 0)
+                    printf("Sent SIGSTOP to child.\n");
+                else
+                    perror("kill(SIGSTOP)");
+                break;
+
+            case 'r':
+                if (kill(pid, SIGCONT) == 0)
+                    printf("Sent SIGCONT to child.\n");
+                else
+                    perror("kill(SIGCONT)");
+                break;
+
+            case 'q':
+                printf("Sending SIGTERM to child...\n");
+                kill(pid, SIGTERM);
+                waitpid(pid, &status, 0);
+                printf("Child terminated. Exiting.\n");
+                exit(EXIT_SUCCESS);
+
+            default:
+                printf("Invalid command. Use 's', 'r' or 'q'.\n");
+                break;
+        }
+    }
+
+    return 0;
+}
+
+3.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+
+volatile sig_atomic_t suspended = 0;
+
+void handle_sigtstp(int sig) {
+    (void)sig;
+    suspended = 1;
+    printf("\n[Signal] Received SIGTSTP → Process suspended.\n");
+    printf("Send SIGCONT (e.g. kill -CONT %d) to resume.\n", getpid());
+    fflush(stdout);
+}
+
+void handle_sigcont(int sig) {
+    (void)sig;
+    suspended = 0;
+    printf("\n[Signal] Received SIGCONT → Process resumed.\n");
+    fflush(stdout);
+}
+
+int main(void) {
+    struct sigaction sa_tstp, sa_cont;
+
+    sa_tstp.sa_handler = handle_sigtstp;
+    sigemptyset(&sa_tstp.sa_mask);
+    sa_tstp.sa_flags = 0;
+    sigaction(SIGTSTP, &sa_tstp, NULL);
+
+    sa_cont.sa_handler = handle_sigcont;
+    sigemptyset(&sa_cont.sa_mask);
+    sa_cont.sa_flags = 0;
+    sigaction(SIGCONT, &sa_cont, NULL);
+
+    printf("Process PID: %d\n", getpid());
+    printf("Press Ctrl+Z to suspend (SIGTSTP).\n");
+    printf("Then resume with: kill -CONT %d\n\n", getpid());
+
+    int counter = 0;
+    while (1) {
+        if (!suspended) {
+            printf("Working... counter = %d\n", counter++);
+        }
+        sleep(1);
+    }
+
+    return 0;
+}
+
+4.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void print_menu(void) {
+    printf("\n===== Dynamic Memory Menu =====\n");
+    printf("1. Allocate memory (malloc)\n");
+    printf("2. Reallocate memory (realloc)\n");
+    printf("3. Free memory\n");
+    printf("4. Display current content\n");
+    printf("5. Exit\n");
+    printf("Choice: ");
+}
+
+int main(void) {
+    char *ptr = NULL;
+    size_t current_size = 0;
+    int choice;
+    size_t new_size;
+    char temp[256];
+
+    while (1) {
+        print_menu();
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            printf("Invalid input.\n");
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                if (ptr != NULL) {
+                    printf("Memory already allocated. Free it first.\n");
+                    break;
+                }
+                printf("Enter size in bytes: ");
+                if (scanf("%zu", &new_size) != 1 || new_size == 0) {
+                    printf("Invalid size.\n");
+                    break;
+                }
+                ptr = (char *)malloc(new_size);
+                if (ptr == NULL) {
+                    perror("malloc failed");
+                    break;
+                }
+                current_size = new_size;
+                memset(ptr, 0, current_size);
+                printf("Allocated %zu bytes successfully.\n", current_size);
+                printf("Enter string to store: ");
+                getchar(); /* consume newline */
+                fgets(temp, sizeof(temp), stdin);
+                temp[strcspn(temp, "\n")] = '\0';
+                strncpy(ptr, temp, current_size - 1);
+                break;
+
+            case 2:
+                if (ptr == NULL) {
+                    printf("No memory allocated yet.\n");
+                    break;
+                }
+                printf("Enter new size: ");
+                if (scanf("%zu", &new_size) != 1 || new_size == 0) {
+                    printf("Invalid size.\n");
+                    break;
+                }
+                char *tmp = (char *)realloc(ptr, new_size);
+                if (tmp == NULL) {
+                    perror("realloc failed");
+                    break;
+                }
+                ptr = tmp;
+                if (new_size > current_size)
+                    memset(ptr + current_size, 0, new_size - current_size);
+                current_size = new_size;
+                printf("Reallocated to %zu bytes.\n", current_size);
+                break;
+
+            case 3:
+                if (ptr == NULL) {
+                    printf("Nothing to free.\n");
+                    break;
+                }
+                free(ptr);
+                ptr = NULL;
+                current_size = 0;
+                printf("Memory freed.\n");
+                break;
+
+            case 4:
+                if (ptr == NULL)
+                    printf("No memory allocated.\n");
+                else
+                    printf("Content: \"%s\" (size: %zu)\n", ptr, current_size);
+                break;
+
+            case 5:
+                if (ptr != NULL) {
+                    free(ptr);
+                    printf("Freed remaining memory before exit.\n");
+                }
+                printf("Goodbye.\n");
+                return 0;
+
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
+
+5.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <errno.h>
+
+void list_files(void) {
+    DIR *dir = opendir(".");
+    if (dir == NULL) {
+        perror("opendir");
+        return;
+    }
+
+    printf("\n=== Files in current directory ===\n");
+    struct dirent *entry;
+    int count = 0;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue;   /* skip . and .. */
+        printf("  %s\n", entry->d_name);
+        count++;
+    }
+    printf("Total files shown: %d\n", count);
+    closedir(dir);
+}
+
+void create_file(void) {
+    char filename[256];
+    char content[1024];
+
+    printf("Enter filename to create: ");
+    if (scanf("%255s", filename) != 1) return;
+    getchar(); /* consume newline */
+
+    printf("Enter content (end with empty line):\n");
+    content[0] = '\0';
+    char line[256];
+    while (fgets(line, sizeof(line), stdin)) {
+        if (line[0] == '\n') break;
+        strncat(content, line, sizeof(content) - strlen(content) - 1);
+    }
+
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL) {
+        perror("fopen (create)");
+        return;
+    }
+    fputs(content, fp);
+    fclose(fp);
+    printf("File '%s' created successfully.\n", filename);
+}
+
+void read_file(void) {
+    char filename[256];
+    printf("Enter filename to read: ");
+    if (scanf("%255s", filename) != 1) return;
+
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("fopen (read)");
+        return;
+    }
+
+    printf("\n=== Content of %s ===\n", filename);
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        fputs(buffer, stdout);
+    }
+    printf("\n=== End of file ===\n");
+    fclose(fp);
+}
+
+int main(void) {
+    int choice;
+
+    while (1) {
+        printf("\n1. List files\n2. Create file\n3. Read file\n4. Exit\nChoice: ");
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            continue;
+        }
+
+        switch (choice) {
+            case 1: list_files(); break;
+            case 2: create_file(); break;
+            case 3: read_file(); break;
+            case 4: return 0;
+            default: printf("Invalid choice.\n");
+        }
+    }
+}
+
+
+6.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+char *dynamic_mem = NULL;
+
+void exit_handler_1(void) {
+    printf("Exit Handler 1: Freeing dynamically allocated memory...\n");
+    if (dynamic_mem != NULL) {
+        free(dynamic_mem);
+        dynamic_mem = NULL;
+        printf("  Memory freed successfully.\n");
+    } else {
+        printf("  No memory to free (already NULL).\n");
+    }
+}
+
+void exit_handler_2(void) {
+    printf("Exit Handler 2: Performing cleanup tasks...\n");
+}
+
+void exit_handler_3(void) {
+    printf("Exit Handler 3: Program is about to terminate. Goodbye!\n");
+}
+
+int main(void) {
+    /* Register in order 1 → 2 → 3 (they will run in reverse) */
+    if (atexit(exit_handler_1) != 0) {
+        fprintf(stderr, "Failed to register exit_handler_1\n");
+        return EXIT_FAILURE;
+    }
+    if (atexit(exit_handler_2) != 0) {
+        fprintf(stderr, "Failed to register exit_handler_2\n");
+        return EXIT_FAILURE;
+    }
+    if (atexit(exit_handler_3) != 0) {
+        fprintf(stderr, "Failed to register exit_handler_3\n");
+        return EXIT_FAILURE;
+    }
+
+    /* Allocate some memory that handler_1 will free */
+    dynamic_mem = (char *)malloc(128);
+    if (dynamic_mem == NULL) {
+        perror("malloc");
+        return EXIT_FAILURE;
+    }
+    strcpy(dynamic_mem, "This memory will be freed by atexit handler");
+
+    printf("Main: Dynamic memory allocated and registered three atexit handlers.\n");
+    printf("Main: Exiting now...\n\n");
+
+    return EXIT_SUCCESS;   /* triggers atexit handlers in reverse order */
+}
+
+7.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <string.h>
+
+int main(void) {
+    DIR *dir;
+    struct dirent *entry;
+    char filename[256];
+    char content[512];
+    FILE *fp;
+
+    /* 1. List all files */
+    dir = opendir(".");
+    if (dir == NULL) {
+        perror("opendir");
+        return 1;
+    }
+
+    printf("Files in current directory:\n");
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] != '.')
+            printf("  %s\n", entry->d_name);
+    }
+    closedir(dir);
+
+    /* 2. Create a file */
+    printf("\nEnter name of file to create: ");
+    scanf("%255s", filename);
+    getchar();
+
+    printf("Enter content: ");
+    fgets(content, sizeof(content), stdin);
+
+    fp = fopen(filename, "w");
+    if (fp == NULL) {
+        perror("fopen create");
+        return 1;
+    }
+    fputs(content, fp);
+    fclose(fp);
+    printf("File created.\n");
+
+    /* 3. Read and display */
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("fopen read");
+        return 1;
+    }
+
+    printf("\nContent of %s:\n", filename);
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp)) {
+        fputs(buf, stdout);
+    }
+    fclose(fp);
+
+    return 0;
+}
+
+
+8.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+
+const char *file_type(mode_t mode) {
+    if (S_ISREG(mode))  return "Regular File";
+    if (S_ISDIR(mode))  return "Directory";
+    if (S_ISLNK(mode))  return "Symbolic Link";
+    if (S_ISCHR(mode))  return "Character Device";
+    if (S_ISBLK(mode))  return "Block Device";
+    if (S_ISFIFO(mode)) return "FIFO/Pipe";
+    if (S_ISSOCK(mode)) return "Socket";
+    return "Unknown";
+}
+
+int main(void) {
+    DIR *dir = opendir(".");
+    if (dir == NULL) {
+        perror("opendir");
+        return 1;
+    }
+
+    struct dirent *entry;
+    struct stat st;
+    int total = 0;
+
+    printf("%-30s %-12s %s\n", "Name", "Size (bytes)", "Type");
+    printf("------------------------------------------------------------\n");
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        if (stat(entry->d_name, &st) == -1) {
+            perror(entry->d_name);
+            continue;
+        }
+
+        printf("%-30s %-12ld %s\n",
+               entry->d_name,
+               (long)st.st_size,
+               file_type(st.st_mode));
+        total++;
+    }
+    closedir(dir);
+
+    printf("------------------------------------------------------------\n");
+    printf("Total files/directories: %d\n\n", total);
+
+    /* Create a file with a hole */
+    const char *hole_file = "file_with_hole.dat";
+    int fd = open(hole_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+
+    /* Write some data at the beginning */
+    const char *data1 = "START";
+    write(fd, data1, strlen(data1));
+
+    /* Seek far ahead → creates a hole */
+    if (lseek(fd, 4096, SEEK_SET) == -1) {
+        perror("lseek");
+        close(fd);
+        return 1;
+    }
+
+    /* Write data after the hole */
+    const char *data2 = "END";
+    write(fd, data2, strlen(data2));
+    close(fd);
+
+    /* Show the result */
+    if (stat(hole_file, &st) == 0) {
+        printf("Created sparse file: %s\n", hole_file);
+        printf("Logical size (st_size): %ld bytes\n", (long)st.st_size);
+        printf("Note: Actual disk usage is much smaller due to the hole.\n");
     }
 
     return 0;
