@@ -55,17 +55,24 @@ int main() {
     return 0;
 }
 
+
+
 3.
 
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
 
+static volatile sig_atomic_t resumed = 0;
+
 void handler(int sig) {
-    if (sig == SIGTSTP)
-        printf("\nProcess suspended (SIGTSTP). Press Ctrl+Z again or send SIGCONT\n");
-    else if (sig == SIGCONT)
-        printf("\nProcess resumed (SIGCONT)\n");
+    if (sig == SIGTSTP) {
+        static const char message[] = "\nSuspending (send SIGCONT to resume)\n";
+        write(STDOUT_FILENO, message, sizeof(message) - 1);
+        kill(getpid(), SIGSTOP);
+    } else if (sig == SIGCONT) {
+        resumed = 1;
+    }
 }
 
 int main() {
