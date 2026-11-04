@@ -3,61 +3,23 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUFFER_SIZE 64
-#define NUM_BUFFERS 3
+#define BUF_SIZE 50
 
-typedef struct {
-    char data[BUFFER_SIZE];
-    int used;
-} BufferBlock;
+int main() {
+    char buffer[BUF_SIZE];
 
-void clear_buffer(BufferBlock *buf) {
-    memset(buf->data, 0, BUFFER_SIZE);
-    buf->used = 0;
-}
+    printf("Enter text: ");
+    fgets(buffer, BUF_SIZE, stdin);
+    buffer[strcspn(buffer, "\n")] = '\0';
 
-void display_buffer(const BufferBlock *buf, int index) {
-    printf("Buffer %d: ", index);
-    if (buf->used == 0) {
-        printf("[EMPTY / CLEARED]\n");
-    } else {
-        printf("\"%s\" (used: %d bytes)\n", buf->data, buf->used);
-    }
-}
+    printf("Buffer content: %s\n", buffer);
 
-int main(void) {
-    BufferBlock buffers[NUM_BUFFERS];
-
-    /* Initialize all buffers to empty */
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        clear_buffer(&buffers[i]);
-    }
-
-    printf("=== Storing data into buffers ===\n");
-    strncpy(buffers[0].data, "Hello from Buffer 0", BUFFER_SIZE - 1);
-    buffers[0].used = strlen(buffers[0].data);
-
-    strncpy(buffers[1].data, "This is Buffer Block 1", BUFFER_SIZE - 1);
-    buffers[1].used = strlen(buffers[1].data);
-
-    strncpy(buffers[2].data, "Final Buffer Content", BUFFER_SIZE - 1);
-    buffers[2].used = strlen(buffers[2].data);
-
-    printf("\n=== Displaying buffers after store ===\n");
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        display_buffer(&buffers[i], i);
-    }
-
-    printf("\n=== Clearing Buffer 1 ===\n");
-    clear_buffer(&buffers[1]);
-
-    printf("\n=== Displaying buffers after clear ===\n");
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        display_buffer(&buffers[i], i);
-    }
+    memset(buffer, 0, BUF_SIZE);          // clear buffer
+    printf("Cleared buffer: \"%s\"\n", buffer);
 
     return 0;
 }
+
 
 2.
 
