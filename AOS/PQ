@@ -177,54 +177,28 @@ int main() {
 #include <stdio.h>
 #include <stdlib.h>
 
-char *dynamic_mem = NULL;
+char *ptr = NULL;
 
-void exit_handler_1(void) {
-    printf("Exit Handler 1: Freeing dynamically allocated memory...\n");
-    if (dynamic_mem != NULL) {
-        free(dynamic_mem);
-        dynamic_mem = NULL;
-        printf("  Memory freed successfully.\n");
+void exit1() {
+    if (ptr != NULL) {
+        free(ptr);
+        printf("Exit1: Memory freed\n");
     } else {
-        printf("  No memory to free (already NULL).\n");
+        printf("Exit1: Nothing to free\n");
     }
 }
 
-void exit_handler_2(void) {
-    printf("Exit Handler 2: Performing cleanup tasks...\n");
-}
+void exit2() { printf("Exit2: Second handler\n"); }
+void exit3() { printf("Exit3: First registered (runs last)\n"); }
 
-void exit_handler_3(void) {
-    printf("Exit Handler 3: Program is about to terminate. Goodbye!\n");
-}
+int main() {
+    ptr = (char *)malloc(100);
+    atexit(exit1);
+    atexit(exit2);
+    atexit(exit3);
 
-int main(void) {
-    /* Register in order 1 → 2 → 3 (they will run in reverse) */
-    if (atexit(exit_handler_1) != 0) {
-        fprintf(stderr, "Failed to register exit_handler_1\n");
-        return EXIT_FAILURE;
-    }
-    if (atexit(exit_handler_2) != 0) {
-        fprintf(stderr, "Failed to register exit_handler_2\n");
-        return EXIT_FAILURE;
-    }
-    if (atexit(exit_handler_3) != 0) {
-        fprintf(stderr, "Failed to register exit_handler_3\n");
-        return EXIT_FAILURE;
-    }
-
-    /* Allocate some memory that handler_1 will free */
-    dynamic_mem = (char *)malloc(128);
-    if (dynamic_mem == NULL) {
-        perror("malloc");
-        return EXIT_FAILURE;
-    }
-    strcpy(dynamic_mem, "This memory will be freed by atexit handler");
-
-    printf("Main: Dynamic memory allocated and registered three atexit handlers.\n");
-    printf("Main: Exiting now...\n\n");
-
-    return EXIT_SUCCESS;   /* triggers atexit handlers in reverse order */
+    printf("Main executing...\n");
+    return 0;                           // handlers run in reverse order
 }
 
 7.
