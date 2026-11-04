@@ -134,95 +134,41 @@ int main() {
 5.
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
-#include <unistd.h>
-#include <errno.h>
+#include <stdlib.h>
 
-void list_files(void) {
-    DIR *dir = opendir(".");
-    if (dir == NULL) {
-        perror("opendir");
-        return;
-    }
+int main() {
+    DIR *d = opendir(".");
+    struct dirent *e;
+    char name[100], content[200];
+    FILE *fp;
 
-    printf("\n=== Files in current directory ===\n");
-    struct dirent *entry;
-    int count = 0;
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue;   /* skip . and .. */
-        printf("  %s\n", entry->d_name);
-        count++;
-    }
-    printf("Total files shown: %d\n", count);
-    closedir(dir);
-}
+    printf("Files in current directory:\n");
+    while ((e = readdir(d)) != NULL)
+        printf("%s\n", e->d_name);
+    closedir(d);
 
-void create_file(void) {
-    char filename[256];
-    char content[1024];
+    printf("\nEnter filename to create: ");
+    scanf("%s", name);
+    getchar();                          // clear newline
 
-    printf("Enter filename to create: ");
-    if (scanf("%255s", filename) != 1) return;
-    getchar(); /* consume newline */
+    printf("Enter content: ");
+    fgets(content, sizeof(content), stdin);
 
-    printf("Enter content (end with empty line):\n");
-    content[0] = '\0';
-    char line[256];
-    while (fgets(line, sizeof(line), stdin)) {
-        if (line[0] == '\n') break;
-        strncat(content, line, sizeof(content) - strlen(content) - 1);
-    }
-
-    FILE *fp = fopen(filename, "w");
-    if (fp == NULL) {
-        perror("fopen (create)");
-        return;
-    }
+    fp = fopen(name, "w");
+    if (!fp) { perror("fopen"); return 1; }
     fputs(content, fp);
     fclose(fp);
-    printf("File '%s' created successfully.\n", filename);
-}
+    printf("File created.\n");
 
-void read_file(void) {
-    char filename[256];
-    printf("Enter filename to read: ");
-    if (scanf("%255s", filename) != 1) return;
-
-    FILE *fp = fopen(filename, "r");
-    if (fp == NULL) {
-        perror("fopen (read)");
-        return;
-    }
-
-    printf("\n=== Content of %s ===\n", filename);
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        fputs(buffer, stdout);
-    }
-    printf("\n=== End of file ===\n");
+    fp = fopen(name, "r");
+    if (!fp) { perror("fopen"); return 1; }
+    printf("\nFile content:\n");
+    while (fgets(content, sizeof(content), fp))
+        printf("%s", content);
     fclose(fp);
-}
 
-int main(void) {
-    int choice;
-
-    while (1) {
-        printf("\n1. List files\n2. Create file\n3. Read file\n4. Exit\nChoice: ");
-        if (scanf("%d", &choice) != 1) {
-            while (getchar() != '\n');
-            continue;
-        }
-
-        switch (choice) {
-            case 1: list_files(); break;
-            case 2: create_file(); break;
-            case 3: read_file(); break;
-            case 4: return 0;
-            default: printf("Invalid choice.\n");
-        }
-    }
+    return 0;
 }
 
 
