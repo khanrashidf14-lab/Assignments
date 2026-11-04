@@ -28,73 +28,30 @@ int main() {
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include <ctype.h>
 
-void child_work(void) {
-    while (1) {
-        printf("Child (PID %d) is running...\n", getpid());
-        sleep(1);
-    }
-}
-
-int main(void) {
+int main() {
     pid_t pid = fork();
+    if (pid < 0) { perror("fork"); exit(1); }
 
-    if (pid < 0) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pid == 0) {
-        /* Child process */
-        child_work();
-        exit(EXIT_SUCCESS);
-    }
-
-    /* Parent process */
-    char choice;
-    int status;
-
-    printf("Parent PID: %d | Child PID: %d\n", getpid(), pid);
-    printf("Commands: 's' = stop, 'r' = resume, 'q' = quit\n");
-
-    while (1) {
-        printf("Enter command: ");
-        if (scanf(" %c", &choice) != 1) {
-            while (getchar() != '\n');   /* clear invalid input */
-            printf("Invalid input. Try again.\n");
-            continue;
+    if (pid == 0) {                    // child
+        while (1) {
+            printf("Child running (pid %d)\n", getpid());
+            sleep(1);
         }
-        choice = tolower(choice);
-
-        switch (choice) {
-            case 's':
-                if (kill(pid, SIGSTOP) == 0)
-                    printf("Sent SIGSTOP to child.\n");
-                else
-                    perror("kill(SIGSTOP)");
-                break;
-
-            case 'r':
-                if (kill(pid, SIGCONT) == 0)
-                    printf("Sent SIGCONT to child.\n");
-                else
-                    perror("kill(SIGCONT)");
-                break;
-
-            case 'q':
-                printf("Sending SIGTERM to child...\n");
+    } else {                           // parent
+        char ch;
+        while (1) {
+            printf("Enter s(stop)/r(resume)/q(quit): ");
+            scanf(" %c", &ch);
+            if (ch == 's') kill(pid, SIGSTOP);
+            else if (ch == 'r') kill(pid, SIGCONT);
+            else if (ch == 'q') {
                 kill(pid, SIGTERM);
-                waitpid(pid, &status, 0);
-                printf("Child terminated. Exiting.\n");
-                exit(EXIT_SUCCESS);
-
-            default:
-                printf("Invalid command. Use 's', 'r' or 'q'.\n");
+                wait(NULL);
                 break;
+            } else printf("Invalid input\n");
         }
     }
-
     return 0;
 }
 
