@@ -93,112 +93,43 @@ int main() {
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-void print_menu(void) {
-    printf("\n===== Dynamic Memory Menu =====\n");
-    printf("1. Allocate memory (malloc)\n");
-    printf("2. Reallocate memory (realloc)\n");
-    printf("3. Free memory\n");
-    printf("4. Display current content\n");
-    printf("5. Exit\n");
-    printf("Choice: ");
-}
+int main() {
+    int *arr, n, i, new_n;
 
-int main(void) {
-    char *ptr = NULL;
-    size_t current_size = 0;
-    int choice;
-    size_t new_size;
-    char temp[256];
+    printf("Enter size: ");
+    scanf("%d", &n);
 
-    while (1) {
-        print_menu();
-        if (scanf("%d", &choice) != 1) {
-            while (getchar() != '\n');
-            printf("Invalid input.\n");
-            continue;
-        }
+    arr = (int *)malloc(n * sizeof(int));
+    if (!arr) { printf("malloc failed\n"); return 1; }
 
-        switch (choice) {
-            case 1:
-                if (ptr != NULL) {
-                    printf("Memory already allocated. Free it first.\n");
-                    break;
-                }
-                printf("Enter size in bytes: ");
-                if (scanf("%zu", &new_size) != 1 || new_size == 0) {
-                    printf("Invalid size.\n");
-                    break;
-                }
-                ptr = (char *)malloc(new_size);
-                if (ptr == NULL) {
-                    perror("malloc failed");
-                    break;
-                }
-                current_size = new_size;
-                memset(ptr, 0, current_size);
-                printf("Allocated %zu bytes successfully.\n", current_size);
-                printf("Enter string to store: ");
-                getchar(); /* consume newline */
-                fgets(temp, sizeof(temp), stdin);
-                temp[strcspn(temp, "\n")] = '\0';
-                strncpy(ptr, temp, current_size - 1);
-                break;
+    printf("Enter %d elements: ", n);
+    for (i = 0; i < n; i++) scanf("%d", &arr[i]);
 
-            case 2:
-                if (ptr == NULL) {
-                    printf("No memory allocated yet.\n");
-                    break;
-                }
-                printf("Enter new size: ");
-                if (scanf("%zu", &new_size) != 1 || new_size == 0) {
-                    printf("Invalid size.\n");
-                    break;
-                }
-                char *tmp = (char *)realloc(ptr, new_size);
-                if (tmp == NULL) {
-                    perror("realloc failed");
-                    break;
-                }
-                ptr = tmp;
-                if (new_size > current_size)
-                    memset(ptr + current_size, 0, new_size - current_size);
-                current_size = new_size;
-                printf("Reallocated to %zu bytes.\n", current_size);
-                break;
+    printf("Array: ");
+    for (i = 0; i < n; i++) printf("%d ", arr[i]);
+    printf("\n");
 
-            case 3:
-                if (ptr == NULL) {
-                    printf("Nothing to free.\n");
-                    break;
-                }
-                free(ptr);
-                ptr = NULL;
-                current_size = 0;
-                printf("Memory freed.\n");
-                break;
+    printf("Enter new size: ");
+    scanf("%d", &new_n);
 
-            case 4:
-                if (ptr == NULL)
-                    printf("No memory allocated.\n");
-                else
-                    printf("Content: \"%s\" (size: %zu)\n", ptr, current_size);
-                break;
+    arr = (int *)realloc(arr, new_n * sizeof(int));
+    if (!arr) { printf("realloc failed\n"); return 1; }
 
-            case 5:
-                if (ptr != NULL) {
-                    free(ptr);
-                    printf("Freed remaining memory before exit.\n");
-                }
-                printf("Goodbye.\n");
-                return 0;
-
-            default:
-                printf("Invalid choice.\n");
-        }
+    if (new_n > n) {
+        printf("Enter %d more elements: ", new_n - n);
+        for (i = n; i < new_n; i++) scanf("%d", &arr[i]);
     }
+
+    printf("New array: ");
+    for (i = 0; i < new_n; i++) printf("%d ", arr[i]);
+    printf("\n");
+
+    free(arr);
+    printf("Memory freed\n");
+    return 0;
 }
+
 
 5.
 
