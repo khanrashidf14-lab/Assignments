@@ -1,4 +1,6 @@
-1.
+//1. write a c program that demonstrate the use of the buffer blocks,use fixed-size
+//buffer to store ,display and clear the buffer cleared buffer block.
+
 
 #include <stdio.h>
 #include <string.h>
