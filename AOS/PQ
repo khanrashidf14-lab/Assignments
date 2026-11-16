@@ -23,7 +23,9 @@ int main() {
 }
 
 
-2.
+//2. write a c program where a parent controls a child process using signals:SIGSTOP(suspend),SIGCONT(resume),
+and SIGTERM(terminate).The parent takes user input('s','r','q') to send the respective signals,handles invalid 
+inputs,and ensures proper child termination.
 
 #include <stdio.h>
 #include <stdlib.h>
