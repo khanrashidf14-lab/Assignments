@@ -30,31 +30,23 @@ import scala.io.StdIn
 object secondMaximum{
   def main(args: Array[String]): Unit ={
 
-    print("Enter 1st number: ")
+    println("Enter 1st number: ")
     val num1 = StdIn.readInt()
-    print("Enter 2nd number: ")
+    println("Enter 2nd number: ")
     val num2 = StdIn.readInt()
-    print("Enter 3rd number: ")
+    println("Enter 3rd number: ")
     val num3 = StdIn.readInt()
-    print("Enter 4th number: ")
+    println("Enter 4th number: ")
     val num4 = StdIn.readInt()
 
-    var max = num1
-    var secondMax = num1
+    val distinctNumbers = Seq(num1, num2, num3, num4).distinct.sorted
 
-    for(i <- 2 to 4){
-      val num = if(i == 2) num2 else if(i == 3) num3 else num4
-
-      if(num > max){
-        secondMax = max
-        max = num
-      }
-      else if(num > secondMax && num != max){
-        secondMax = num
-      }
+    if(distinctNumbers.length >= 2){
+      val secondMax = distinctNumbers(distinctNumbers.length - 2)
+      println(s"The number $secondMax is the second maximum")
+    } else {
+      println("There is no second distinct maximum")
     }
-
-    println(s"The number $secondMax is the second maximum")
   }
 }
 
